@@ -2,7 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"time"
+
+	"golang.org/x/term"
 )
 
 type buffer struct {
@@ -11,7 +15,13 @@ type buffer struct {
 }
 
 func main() {
-	runStages()
+	width, height, err := term.GetSize(int(os.Stdin.Fd()))
+	if err != nil {
+		log.Fatal(err)
+	}
+	//runStages(height)
+
+	fmt.Printf("the terminal width is %d and the height is %d\n", width, height)
 }
 
 func runTicker() {
@@ -26,7 +36,7 @@ func runTicker() {
 	fmt.Printf("\033[1A")
 }
 
-func runStages() {
+func runStages(bufSize int) {
 	stage1 := []string{
 		"hello louis",
 		"hello joe",
@@ -35,11 +45,11 @@ func runStages() {
 	}
 
 	buff := buffer{
-		bufferSize: 4,
+		bufferSize: bufSize - 2,
 	}
 
-	ticker := time.Tick(time.Second * 1)
-	for i := 0; i < 10; i++ {
+	ticker := time.Tick(time.Millisecond * 200)
+	for i := 0; i < 50; i++ {
 		part := i % len(stage1)
 		<-ticker
 		buff.print(stage1[part])
@@ -47,7 +57,6 @@ func runStages() {
 
 	time.Sleep(time.Second)
 	eraseLines(buff.bufferSize)
-	time.Sleep(time.Second)
 	fmt.Println("stage one finished!")
 }
 
