@@ -11,20 +11,6 @@ type buffer struct {
 }
 
 func main() {
-	// stage1 := []string{
-	// 	"hello louis",
-	// 	"hello joe",
-	// 	"hello cash",
-	// 	"hello zach",
-	// }
-
-	// for _, s := range stage1 {
-	// 	fmt.Println(s)
-	// }
-
-	// time.Sleep(time.Millisecond * 500)
-	// eraseLines(4)
-	// time.Sleep(time.Second)
 	runStages()
 }
 
