@@ -24,7 +24,14 @@ func main() {
 
 	fmt.Printf("the terminal width is %d and the height is %d\n", width, height)
 
-	//runTicker()
+	runTicker()
+
+	// for i := 0; i < 4; i++ {
+	// 	fmt.Println(i)
+	// }
+	// CursorTo(2)
+	// fmt.Println("to this line")
+	// CursorTo(6)
 }
 
 func runTicker() {
@@ -42,40 +49,25 @@ func runTicker() {
 }
 
 func runStages(bufSize int) {
-	buff := buffer{
-		bufferSize: bufSize - 5,
-	}
+	buff := New(bufSize - 5)
 
 	runSampleStage(buff)
 	time.Sleep(time.Second)
-	EraseLines(buff.bufferSize)
+	EraseLines(buff.BufferSize)
 	fmt.Println("stage one finished!")
 
 	runSampleStage(buff)
 	time.Sleep(time.Second)
-	EraseLines(buff.bufferSize)
+	EraseLines(buff.BufferSize)
 	fmt.Println("stage two finished!")
 
 	runSampleStage(buff)
 	time.Sleep(time.Second)
-	EraseLines(buff.bufferSize)
+	EraseLines(buff.BufferSize)
 	fmt.Println("stage three finished!")
 }
 
-func (b *buffer) print(output string) {
-	b.buffer = append(b.buffer, output)
-	if len(b.buffer) <= b.bufferSize {
-		fmt.Printf("%s\n", output)
-	} else {
-		EraseLines(b.bufferSize)
-		for i := b.bufferSize; i > 0; i-- {
-			fmt.Printf("%s", b.buffer[len(b.buffer)-i])
-			fmt.Println()
-		}
-	}
-}
-
-func runSampleStage(buff buffer) {
+func runSampleStage(buff *Terminal) {
 	stage1 := []string{
 		"hello louis",
 		"hello joe",
@@ -87,6 +79,6 @@ func runSampleStage(buff buffer) {
 	for i := 0; i < 50; i++ {
 		part := i % len(stage1)
 		<-ticker
-		buff.print(stage1[part])
+		buff.Print(stage1[part])
 	}
 }

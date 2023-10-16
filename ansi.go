@@ -10,6 +10,10 @@ func CursorDown(line int) {
 	fmt.Printf("\033[%dB", line)
 }
 
+func CursorTo(line int) {
+	fmt.Printf("\033[%d;1H", line)
+}
+
 func ClearEntireLine() {
 	fmt.Printf("\033[2K")
 }
