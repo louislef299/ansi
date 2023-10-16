@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	. "github.com/louislef299/go-ansi-stages/ansi"
+	. "github.com/louislef299/ansi"
 	"golang.org/x/term"
 )
 
