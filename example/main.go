@@ -51,7 +51,7 @@ func runTicker() {
 
 func runStages(bufSize int) {
 	buff := New(bufSize - 5)
-	//buff.SetPrefix("=>")
+	buff.SetPrefix("=>")
 
 	for i := 0; i < 10; i++ {
 		buff.NewStage()
