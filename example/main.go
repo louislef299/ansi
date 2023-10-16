@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/fatih/color"
 	. "github.com/louislef299/ansi"
 	"golang.org/x/term"
 )
@@ -24,7 +25,7 @@ func main() {
 
 	fmt.Printf("the terminal width is %d and the height is %d\n", width, height)
 
-	runTicker()
+	//runTicker()
 
 	// for i := 0; i < 4; i++ {
 	// 	fmt.Println(i)
@@ -50,32 +51,27 @@ func runTicker() {
 
 func runStages(bufSize int) {
 	buff := New(bufSize - 5)
+	//buff.SetPrefix("=>")
 
-	runSampleStage(buff)
-	time.Sleep(time.Second)
-	EraseLines(buff.BufferSize)
-	fmt.Println("stage one finished!")
-
-	runSampleStage(buff)
-	time.Sleep(time.Second)
-	EraseLines(buff.BufferSize)
-	fmt.Println("stage two finished!")
-
-	runSampleStage(buff)
-	time.Sleep(time.Second)
-	EraseLines(buff.BufferSize)
-	fmt.Println("stage three finished!")
+	for i := 0; i < 10; i++ {
+		buff.NewStage()
+		runSampleStage(buff)
+		time.Sleep(time.Second)
+		buff.EraseBuffer()
+		color.Green("=>=> stage %d finished!\n", i)
+		time.Sleep(time.Second)
+	}
 }
 
 func runSampleStage(buff *Terminal) {
 	stage1 := []string{
-		"hello louis",
-		"hello joe",
-		"hello cash",
-		"hello zach",
+		"hello john",
+		"hello ringo",
+		"hello george",
+		"hello paul",
 	}
 
-	ticker := time.Tick(time.Millisecond * 200)
+	ticker := time.Tick(time.Millisecond * 20)
 	for i := 0; i < 50; i++ {
 		part := i % len(stage1)
 		<-ticker
