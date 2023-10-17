@@ -1,4 +1,4 @@
-package main
+package ansi_test
 
 import (
 	"context"
@@ -6,28 +6,20 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"testing"
 	"time"
 
 	. "github.com/louislef299/ansi"
-	"golang.org/x/term"
 )
 
-type buffer struct {
-	bufferSize int
-	buffer     []string
-}
-
-func main() {
-	_, height, err := term.GetSize(int(os.Stdin.Fd()))
-	if err != nil {
-		log.Fatal(err)
-	}
+func TestBuffer(t *testing.T) {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
 	buff := &Buffer{
-		BufferSize: height - 5,
+		BufferSize: 5,
 		Prefix:     "=>",
 	}
 	printer, erase := buff.New(ctx)
@@ -36,8 +28,6 @@ func main() {
 		runSampleStage(printer)
 		erase <- fmt.Sprintf("=>=> stage %d finished!\n", i)
 	}
-
-	//fmt.Printf("the terminal width is %d and the height is %d\n", width, height)
 }
 
 func runSampleStage(printer chan<- string) {
