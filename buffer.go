@@ -2,7 +2,6 @@ package ansi
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 
@@ -17,6 +16,10 @@ type Buffer struct {
 	// A prefix to print before each line
 	Prefix string
 
+	// Set the color of output text
+	EraserColor  color.Attribute
+	PrinterColor color.Attribute
+
 	buffer []string
 }
 
@@ -26,6 +29,7 @@ func (t *Buffer) New(ctx context.Context) (chan<- string, chan<- string) {
 	printer := make(chan string)
 	eraser := make(chan string)
 	var w sync.Mutex
+	c := color.New(t.EraserColor)
 
 	go func() {
 		for {
@@ -37,7 +41,7 @@ func (t *Buffer) New(ctx context.Context) (chan<- string, chan<- string) {
 			case s := <-eraser:
 				w.Lock()
 				t.EraseBuffer()
-				color.Green(s)
+				c.Println(s)
 				t.NewStage()
 				w.Unlock()
 			case <-ctx.Done():
@@ -64,19 +68,20 @@ func (t *Buffer) Print(a ...string) {
 	s := strings.Join(a, " ")
 	t.buffer = append(t.buffer, s)
 	prefixSet := strings.Compare(t.Prefix, "") != 0
+	c := color.New(t.PrinterColor)
 
 	if len(t.buffer) <= t.BufferSize {
 		if prefixSet {
-			fmt.Printf("%s ", t.Prefix)
+			c.Printf("%s ", t.Prefix)
 		}
-		fmt.Println(s)
+		c.Println(s)
 	} else {
 		EraseLines(t.BufferSize)
 		for i := t.BufferSize; i > 0; i-- {
 			if prefixSet {
-				fmt.Printf("%s ", t.Prefix)
+				c.Printf("%s ", t.Prefix)
 			}
-			fmt.Println(t.buffer[len(t.buffer)-i])
+			c.Println(t.buffer[len(t.buffer)-i])
 		}
 	}
 }
