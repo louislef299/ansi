@@ -1,0 +1,15 @@
+run:
+  timeout: 5m
+  skip-dirs:
+    - gopath
+    - vendor
+linters:
+  enable:
+    - gofmt
+    - goimports
+    - govet
+    - ineffassign
+    - misspell
+    - staticcheck
+    - unused
+    - goheader

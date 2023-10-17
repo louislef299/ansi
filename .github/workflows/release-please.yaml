@@ -1,0 +1,24 @@
+---
+jobs:
+  release-please:
+    environment: release-please
+    runs-on: ubuntu-latest
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
+    steps:
+    - id: release
+      uses: google-github-actions/release-please-action@v3
+      with:
+        release-type: simple
+        version-file: version.txt
+
+name: Release Please
+'on':
+  push:
+    branches:
+    - main
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
