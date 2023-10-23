@@ -16,7 +16,7 @@ Create a simple buffer:
 
 ```go
 // Creates a new buffer with a buffer size of 5
-// Returns the buffer object and a printer channel
+// Returns the buffer object
 buff := New(context.TODO(), 5)
 buff.Printf("hello world")
 ```
