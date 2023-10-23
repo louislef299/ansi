@@ -1,6 +1,6 @@
 module github.com/louislef299/ansi
 
-go 1.21.3
+go 1.21
 
 require github.com/fatih/color v1.15.0
 

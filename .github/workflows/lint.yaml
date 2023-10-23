@@ -1,6 +1,6 @@
 ---
 env:
-  GOVERSION: "1.21.1"
+  GOVERSION: "1.21.3"
 
 jobs:
   golangci:
