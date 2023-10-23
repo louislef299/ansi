@@ -95,6 +95,12 @@ func (b *Buffer) Printf(format string, a ...interface{}) {
 	b.printer <- fmt.Sprintf(format, a...)
 }
 
+// Println safely executes the channel printing logic and formats the provided
+// string
+func (b *Buffer) Println(a ...interface{}) {
+	b.printer <- fmt.Sprint(a...)
+}
+
 // print runs the logic required to actually print the output to the desired
 // line in a scrolling fashion
 func (b *Buffer) print(a ...string) {
@@ -117,6 +123,12 @@ func (b *Buffer) print(a ...string) {
 			c.Println(b.buffer[len(b.buffer)-i])
 		}
 	}
+}
+
+// Implements io.Writer
+func (b *Buffer) Write(p []byte) (n int, err error) {
+	b.Println(p)
+	return len(p), nil
 }
 
 func (b *Buffer) getColorWriter(s stage) *color.Color {

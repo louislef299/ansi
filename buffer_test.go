@@ -16,19 +16,19 @@ import (
 func TestBufferCreation(t *testing.T) {
 	fmt.Println("Testing Buffer Creation:")
 	b := New(context.TODO(), 5)
-	b.Printf("hello world")
+	b.Println("hello world")
 }
 
 func TestEraseBuffer(t *testing.T) {
 	fmt.Println("Testing Erase Buffer:")
 	buff := New(context.TODO(), 3)
 
-	ticker := time.Tick(time.Microsecond * 20)
+	ticker := time.Tick(time.Millisecond * 100)
 	for i := 0; i < 5; i++ {
 		<-ticker
-		buff.Printf(fmt.Sprintf("test line %d", i))
+		buff.Printf("test line %d", i)
 	}
-	buff.Printf("erase me!")
+	buff.Println("erase me!")
 	time.Sleep(time.Second)
 
 	buff.EraseBuffer()
@@ -46,7 +46,7 @@ func TestBufferStagesSlow(t *testing.T) {
 
 	for i := 0; i < 2; i++ {
 		runSampleStage(buff, 8, time.Millisecond*200)
-		buff.NewStage(fmt.Sprintf("=>=> stage %d finished!", i))
+		buff.NewStage("=>=> stage %d finished!", i)
 	}
 }
 
