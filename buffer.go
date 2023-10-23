@@ -26,10 +26,7 @@ type Buffer struct {
 	printer chan string
 }
 
-type (
-	bufferWriter = func(format string, a ...interface{}) (n int, err error)
-	stage        string
-)
+type stage string
 
 var (
 	PrinterStage stage = "PRINTER"
