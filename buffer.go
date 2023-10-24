@@ -21,17 +21,11 @@ type Buffer struct {
 	PrinterColor color.Attribute
 	StageColor   color.Attribute
 
+	// Internal synchronization variables
 	buffer  []string
 	eraser  chan string
 	printer chan string
 }
-
-type stage string
-
-const (
-	PrinterStage stage = "PRINTER"
-	EraserStage  stage = "ERASER"
-)
 
 // New starts a goroutine to print or erase lines and cancels on contexb.Done().
 // The return values
@@ -68,7 +62,8 @@ func New(ctx context.Context, bufferSize int) *Buffer {
 	return b
 }
 
-// Resets the Buffer buffer
+// Resets the Buffer buffer by erasing buffer output and printing out the string
+// input to the screen.
 func (b *Buffer) NewStage(format string, a ...interface{}) {
 	if b.BufferSize == 0 {
 		panic("your buffer hasn't been initialized!")
@@ -76,6 +71,7 @@ func (b *Buffer) NewStage(format string, a ...interface{}) {
 	b.eraser <- fmt.Sprintf(format, a...)
 }
 
+// EraseBuffer is the exported function that includes Buffer validations.
 func (b *Buffer) EraseBuffer() {
 	b.NewStage("")
 }
@@ -90,19 +86,19 @@ func (b *Buffer) eraseBuffer() {
 }
 
 // Printf safely executes the channel printing logic and formats the provided
-// string
+// string to the temporary buffer.
 func (b *Buffer) Printf(format string, a ...interface{}) {
 	b.printer <- fmt.Sprintf(format, a...)
 }
 
 // Println safely executes the channel printing logic and formats the provided
-// string
+// string to the temporary buffer.
 func (b *Buffer) Println(a ...interface{}) {
 	b.printer <- fmt.Sprint(a...)
 }
 
 // print runs the logic required to actually print the output to the desired
-// line in a scrolling fashion
+// line in a scrolling fashion.
 func (b *Buffer) print(a ...string) {
 	s := strings.Join(a, " ")
 	b.buffer = append(b.buffer, s)
@@ -125,12 +121,21 @@ func (b *Buffer) print(a ...string) {
 	}
 }
 
-// Implements io.Writer
+// Write implements io.Writer for Buffer to be used as output in other types.
 func (b *Buffer) Write(p []byte) (n int, err error) {
 	b.Println(strings.TrimSpace(string(p)))
 	return len(p), nil
 }
 
+// Custom stage type for color function
+type stage string
+
+const (
+	PrinterStage stage = "PRINTER"
+	EraserStage  stage = "ERASER"
+)
+
+// getColorWriter gets the color set in the Buffer based on the stage.
 func (b *Buffer) getColorWriter(s stage) *color.Color {
 	var c color.Attribute
 	switch s {
