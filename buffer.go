@@ -3,6 +3,8 @@ package ansi
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 	"sync"
 
@@ -21,39 +23,65 @@ type Buffer struct {
 	PrinterColor color.Attribute
 	StageColor   color.Attribute
 
+	w io.Writer
+
 	// Internal synchronization variables
 	buffer  []string
 	eraser  chan string
 	printer chan string
+	stagger chan struct{}
+	lock    *sync.Mutex
+
+	// Standard buffer synchronization requirements
+	stdBuffer bool
+	done      chan struct{}
+}
+
+var std = defaultBuffer()
+
+// Default returns the standard buffer used by the package-level output functions.
+func Default() *Buffer { return std }
+
+// Used to set the standard buffer
+func defaultBuffer() *Buffer {
+	b := New(os.Stdout, context.TODO(), 15)
+	b.stdBuffer = true
+	return b
 }
 
 // New starts a goroutine to print or erase lines and cancels on contexb.Done().
 // The return values
-func New(ctx context.Context, bufferSize int) *Buffer {
-	var w sync.Mutex
+func New(w io.Writer, ctx context.Context, bufferSize int) *Buffer {
 	b := &Buffer{
 		BufferSize: bufferSize,
-		eraser:     make(chan string),
+		w:          w,
+
+		eraser:  make(chan string),
+		lock:    &sync.Mutex{},
+		printer: make(chan string),
+		stagger: make(chan struct{}, bufferSize),
+		done:    make(chan struct{}),
 	}
-	b.printer = make(chan string)
 
 	go func(buff *Buffer) {
 		defer close(b.printer)
 		defer close(buff.eraser)
+		defer close(b.stagger)
+		defer close(b.done)
+
 		for {
 			select {
 			case p := <-b.printer:
-				w.Lock()
 				buff.print(p)
-				w.Unlock()
+				if b.stdBuffer {
+					b.done <- struct{}{}
+				}
 			case e := <-b.eraser:
-				w.Lock()
 				buff.eraseBuffer()
 				buff.buffer = []string{}
 				if strings.Compare("", e) != 0 {
 					buff.getColorWriter(EraserStage).Println(e)
 				}
-				w.Unlock()
 			case <-ctx.Done():
 				return
 			}
@@ -88,18 +116,30 @@ func (b *Buffer) eraseBuffer() {
 // Printf safely executes the channel printing logic and formats the provided
 // string to the temporary buffer.
 func (b *Buffer) Printf(format string, a ...interface{}) {
+	b.stagger <- struct{}{}
+	defer func() {
+		<-b.stagger
+	}()
+
 	b.printer <- fmt.Sprintf(format, a...)
 }
 
 // Println safely executes the channel printing logic and formats the provided
 // string to the temporary buffer.
 func (b *Buffer) Println(a ...interface{}) {
+	b.stagger <- struct{}{}
+	defer func() {
+		<-b.stagger
+	}()
+
 	b.printer <- fmt.Sprint(a...)
 }
 
 // print runs the logic required to actually print the output to the desired
 // line in a scrolling fashion.
 func (b *Buffer) print(a ...string) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
 	s := strings.Join(a, " ")
 	b.buffer = append(b.buffer, s)
 	prefixSet := strings.Compare(b.Prefix, "") != 0
@@ -107,24 +147,53 @@ func (b *Buffer) print(a ...string) {
 
 	if len(b.buffer) <= b.BufferSize {
 		if prefixSet {
-			c.Printf("%s ", b.Prefix)
+			c.Fprintf(b.w, "%s ", b.Prefix)
 		}
-		c.Println(s)
+		c.Fprintln(b.w, s)
 	} else {
 		b.eraseBuffer()
 		for i := b.BufferSize; i > 0; i-- {
 			if prefixSet {
-				c.Printf("%s ", b.Prefix)
+				c.Fprintf(b.w, "%s ", b.Prefix)
 			}
-			c.Println(b.buffer[len(b.buffer)-i])
+			c.Fprintln(b.w, b.buffer[len(b.buffer)-i])
 		}
 	}
 }
 
 // Write implements io.Writer for Buffer to be used as output in other types.
 func (b *Buffer) Write(p []byte) (n int, err error) {
-	b.Println(strings.TrimSpace(string(p)))
+	b.stagger <- struct{}{}
+	defer func() {
+		<-b.stagger
+	}()
+
+	b.printer <- fmt.Sprint(strings.TrimSpace(string(p)))
 	return len(p), nil
+}
+
+// Printf safely executes the channel printing logic and formats the provided
+// string to the standard buffer.
+func Printf(format string, a ...interface{}) {
+	std.stagger <- struct{}{}
+	defer func() {
+		<-std.stagger
+	}()
+
+	std.printer <- fmt.Sprintf(format, a...)
+	<-std.done
+}
+
+// Println safely executes the channel printing logic and formats the provided
+// string to the standard buffer.
+func Println(a ...interface{}) {
+	std.stagger <- struct{}{}
+	defer func() {
+		<-std.stagger
+	}()
+
+	std.printer <- fmt.Sprint(a...)
+	<-std.done
 }
 
 // Custom stage type for color function

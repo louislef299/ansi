@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,13 +16,21 @@ import (
 
 func TestBufferCreation(t *testing.T) {
 	fmt.Println("Testing Buffer Creation:")
-	b := New(context.TODO(), 5)
+	b := New(os.Stdout, context.TODO(), 5)
 	b.Println("hello world")
+}
+
+func TestStandardBuffer(t *testing.T) {
+	ticker := time.Tick(time.Millisecond * 20)
+	for i := 0; i < 20; i++ {
+		<-ticker
+		Printf("%d: hello world", i)
+	}
 }
 
 func TestEraseBuffer(t *testing.T) {
 	fmt.Println("Testing Erase Buffer:")
-	buff := New(context.TODO(), 3)
+	buff := New(os.Stdout, context.TODO(), 3)
 
 	ticker := time.Tick(time.Millisecond * 100)
 	for i := 0; i < 5; i++ {
@@ -41,7 +50,7 @@ func TestBufferStagesSlow(t *testing.T) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	buff := New(ctx, 4)
+	buff := New(os.Stdout, ctx, 4)
 	buff.Prefix = "=>"
 
 	for i := 0; i < 2; i++ {
@@ -57,7 +66,7 @@ func TestBufferStagesColor(t *testing.T) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	buff := New(ctx, 5)
+	buff := New(os.Stdout, ctx, 5)
 	buff.Prefix = "=>"
 	buff.PrinterColor = color.FgHiMagenta
 	buff.StageColor = color.FgGreen
@@ -75,7 +84,7 @@ func TestBufferStagesQuickly(t *testing.T) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	buff := New(ctx, 5)
+	buff := New(os.Stdout, ctx, 5)
 	buff.Prefix = "=>"
 
 	for i := 0; i < 5; i++ {
@@ -85,7 +94,7 @@ func TestBufferStagesQuickly(t *testing.T) {
 }
 
 func TestLogWriterSimple(t *testing.T) {
-	log.SetOutput(New(context.TODO(), 5))
+	log.SetOutput(New(os.Stdout, context.TODO(), 5))
 	log.Println("written from test")
 }
 
@@ -96,7 +105,7 @@ func TestLogWriterStage(t *testing.T) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	buff := New(ctx, 5)
+	buff := New(os.Stdout, ctx, 5)
 	buff.Prefix = "=>"
 	log.SetOutput(buff)
 
@@ -124,4 +133,24 @@ func runSampleStage(b *Buffer, iterations int, wait time.Duration) {
 		<-ticker
 		b.Printf("%d: %s", i, stage1[part])
 	}
+}
+
+func TestStressBuffer(t *testing.T) {
+	fmt.Println("Attempting to stress the Buffer")
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	buff := New(os.Stdout, ctx, 15)
+	log.SetOutput(buff)
+
+	var wg sync.WaitGroup
+	routines := 3000
+	wg.Add(routines)
+	for i := 0; i < routines; i++ {
+		go func(n int) {
+			defer wg.Done()
+			buff.Printf("hello from %d", n)
+		}(i)
+	}
+	wg.Wait()
 }
