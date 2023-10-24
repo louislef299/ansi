@@ -20,12 +20,18 @@ func TestBufferCreation(t *testing.T) {
 	b.Println("hello world")
 }
 
-func TestStandardBuffer(t *testing.T) {
+func TestStandardBufferTicker(t *testing.T) {
+	fmt.Println("Testing the Standard Buffer:")
+	SetPrefix("()=>")
+	SetPrinterColor(color.FgHiRed)
+
 	ticker := time.Tick(time.Millisecond * 20)
 	for i := 0; i < 20; i++ {
 		<-ticker
 		Printf("%d: hello world", i)
 	}
+	time.Sleep(time.Second)
+	EraseBuffer()
 }
 
 func TestEraseBuffer(t *testing.T) {
@@ -51,7 +57,7 @@ func TestBufferStagesSlow(t *testing.T) {
 	defer cancel()
 
 	buff := New(os.Stdout, ctx, 4)
-	buff.Prefix = "=>"
+	buff.SetPrefix("=>")
 
 	for i := 0; i < 2; i++ {
 		runSampleStage(buff, 8, time.Millisecond*200)
@@ -67,9 +73,9 @@ func TestBufferStagesColor(t *testing.T) {
 	defer cancel()
 
 	buff := New(os.Stdout, ctx, 5)
-	buff.Prefix = "=>"
-	buff.PrinterColor = color.FgHiMagenta
-	buff.StageColor = color.FgGreen
+	buff.SetPrefix("=>")
+	buff.SetPrinterColor(color.FgHiMagenta)
+	buff.SetStageColor(color.FgGreen)
 
 	for i := 0; i < 3; i++ {
 		runSampleStage(buff, 50, time.Millisecond*20)
@@ -85,12 +91,32 @@ func TestBufferStagesQuickly(t *testing.T) {
 	defer cancel()
 
 	buff := New(os.Stdout, ctx, 5)
-	buff.Prefix = "=>"
+	buff.SetPrefix("=>")
 
 	for i := 0; i < 5; i++ {
 		runSampleStage(buff, 50, time.Millisecond*20)
 		buff.NewStage("=>=> stage %d finished!", i)
 	}
+}
+
+func TestStandardBufferStagesQuickly(t *testing.T) {
+	fmt.Println("Testing Standard Buffer Stages Quickly:")
+	SetStageColor(color.FgBlue)
+
+	for i := 0; i < 5; i++ {
+		ticker := time.Tick(time.Millisecond * 20)
+		for i := 0; i < 30; i++ {
+			<-ticker
+			Printf("%d: testing testing", i)
+		}
+
+		NewStage("=>=> stage %d finished!", i)
+	}
+}
+
+func TestEmptyErase(t *testing.T) {
+	fmt.Println("Testing Empty Erase(this line should still show):")
+	EraseBuffer()
 }
 
 func TestLogWriterSimple(t *testing.T) {
@@ -106,7 +132,7 @@ func TestLogWriterStage(t *testing.T) {
 	defer cancel()
 
 	buff := New(os.Stdout, ctx, 5)
-	buff.Prefix = "=>"
+	buff.SetPrefix("=>")
 	log.SetOutput(buff)
 
 	ticker := time.Tick(time.Millisecond * 100)
@@ -153,4 +179,5 @@ func TestStressBuffer(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
+	time.Sleep(time.Millisecond)
 }
