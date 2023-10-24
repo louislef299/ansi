@@ -84,6 +84,31 @@ func TestBufferStagesQuickly(t *testing.T) {
 	}
 }
 
+func TestLogWriterSimple(t *testing.T) {
+	log.SetOutput(New(context.TODO(), 5))
+	log.Println("written from test")
+}
+
+func TestLogWriterStage(t *testing.T) {
+	fmt.Println("Testing Buffer Log Stages:")
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	buff := New(ctx, 5)
+	buff.Prefix = "=>"
+	log.SetOutput(buff)
+
+	ticker := time.Tick(time.Millisecond * 100)
+	for i := 0; i < 15; i++ {
+		<-ticker
+		log.Printf("%d: logging", i)
+	}
+	buff.NewStage("successful logger")
+	time.Sleep(time.Second)
+}
+
 // Runs a sample stage to generate output
 func runSampleStage(b *Buffer, iterations int, wait time.Duration) {
 	stage1 := []string{

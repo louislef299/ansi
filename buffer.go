@@ -28,7 +28,7 @@ type Buffer struct {
 
 type stage string
 
-var (
+const (
 	PrinterStage stage = "PRINTER"
 	EraserStage  stage = "ERASER"
 )
@@ -127,7 +127,7 @@ func (b *Buffer) print(a ...string) {
 
 // Implements io.Writer
 func (b *Buffer) Write(p []byte) (n int, err error) {
-	b.Println(p)
+	b.Println(strings.TrimSpace(string(p)))
 	return len(p), nil
 }
 
