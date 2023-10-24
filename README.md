@@ -54,6 +54,13 @@ for i := 0; i < 5; i++ {
 buff.NewStage("stage 2 complete!")
 ```
 
+The ANSI Buffer also implements io.Writer:
+
+```go
+log.SetOutput(New(context.TODO(), 5))
+log.Println("written from test")
+```
+
 ## Contributing
 
 The tests are currently visual tests and require a human to watch the output and
