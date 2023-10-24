@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/louislef299/ansi/compare/v1.0.0...v1.0.1) (2023-10-24)
+
+
+### Bug Fixes
+
+* Update readme ([#5](https://github.com/louislef299/ansi/issues/5)) ([2e9f14f](https://github.com/louislef299/ansi/commit/2e9f14f073eaaaf1d4fe892c5ba9552f52434640))
+
 ## 1.0.0 (2023-10-23)
 
 
