@@ -23,30 +23,33 @@ type Buffer struct {
 	printerColor color.Attribute
 	stageColor   color.Attribute
 
-	w io.Writer
+	w      io.Writer
+	buffer []string
 
 	// Internal synchronization variables
-	buffer  []string
 	eraser  chan string
 	printer chan string
 	stagger chan struct{}
-	lock    *sync.RWMutex
+
+	lock *sync.RWMutex
+	ctx  context.Context
 
 	// Standard buffer synchronization requirements
 	stdBuffer bool
 	done      chan struct{}
 }
 
-var std = defaultBuffer()
+var std, cancel = defaultBuffer()
 
 // Default returns the standard buffer used by the package-level output functions.
 func Default() *Buffer { return std }
 
 // defaultBuffer is used to set the standard buffer internally.
-func defaultBuffer() *Buffer {
-	b := New(context.TODO(), os.Stdout, 15)
+func defaultBuffer() (*Buffer, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(context.TODO())
+	b := New(ctx, os.Stdout, 15)
 	b.stdBuffer = true
-	return b
+	return b, cancel
 }
 
 // New creates a new Buffer which starts a goroutine to print or erase lines and
@@ -54,15 +57,17 @@ func defaultBuffer() *Buffer {
 // be written.
 func New(ctx context.Context, w io.Writer, bufferSize int) *Buffer {
 	b := &Buffer{
-		bufferSize: bufferSize,
-		w:          w,
-
 		eraser:  make(chan string),
-		lock:    &sync.RWMutex{},
 		printer: make(chan string),
 		stagger: make(chan struct{}, bufferSize),
 		done:    make(chan struct{}),
+
+		lock: &sync.RWMutex{},
+		ctx:  ctx,
 	}
+
+	b.SetOutput(w)
+	b.SetBufferSize(bufferSize)
 
 	go func(buff *Buffer) {
 		defer close(b.printer)
@@ -84,7 +89,7 @@ func New(ctx context.Context, w io.Writer, bufferSize int) *Buffer {
 					buff.getColorWriter(EraserStage).Println(e)
 				}
 				b.done <- struct{}{}
-			case <-ctx.Done():
+			case <-b.ctx.Done():
 				return
 			}
 		}
@@ -158,18 +163,27 @@ func (b *Buffer) Println(a ...interface{}) {
 	b.printer <- fmt.Sprint(a...)
 }
 
+// SetBufferSize sets the size of the Buffer.
+func (b *Buffer) SetBufferSize(size int) {
+	b.bufferSize = size
+}
+
+// SetOutput sets the destination output for the Buffer.
 func (b *Buffer) SetOutput(w io.Writer) {
 	b.w = w
 }
 
+// SetPrefix sets the prefix for output from the Buffer.
 func (b *Buffer) SetPrefix(prefix string) {
 	b.prefix = prefix
 }
 
+// SetPrinterColor sets the output color for scrolling output on the Buffer.
 func (b *Buffer) SetPrinterColor(color color.Attribute) {
 	b.printerColor = color
 }
 
+// SetStageColor sets the output color for stage finalizer output on the Buffer.
 func (b *Buffer) SetStageColor(color color.Attribute) {
 	b.stageColor = color
 }
@@ -185,6 +199,12 @@ func (b *Buffer) Write(p []byte) (n int, err error) {
 
 	b.printer <- fmt.Sprint(strings.TrimSpace(string(p)))
 	return len(p), nil
+}
+
+// CancelBuffer safely abandons work and closes the Buffer. After Cancelling a
+// Buffer, it is no longer useable.
+func CancelBuffer() {
+	cancel()
 }
 
 // EraseBuffer is the exported function that includes Buffer validations.
@@ -224,18 +244,34 @@ func Println(a ...interface{}) {
 	<-std.done
 }
 
+// SetBufferSize sets the buffer size of the standard Buffer.
+func SetBufferSize(size int) {
+	std.bufferSize = size
+}
+
+// SetContext sets the context of the standard Buffer.
+func SetContext(ctx context.Context) {
+	std.ctx = ctx
+}
+
+// SetOutput sets the destination output for the standard Buffer.
 func SetOutput(w io.Writer) {
 	std.w = w
 }
 
+// SetPrefix sets the prefix for output from the standard Buffer.
 func SetPrefix(prefix string) {
 	std.prefix = prefix
 }
 
+// SetPrinterColor sets the output color for scrolling output on the standard
+// Buffer.
 func SetPrinterColor(color color.Attribute) {
 	std.printerColor = color
 }
 
+// SetStageColor sets the output color for stage finalizer output on the
+// standard Buffer.
 func SetStageColor(color color.Attribute) {
 	std.stageColor = color
 }
