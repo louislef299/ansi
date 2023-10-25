@@ -1,4 +1,4 @@
-# Go ANSI Stages
+# Go Scroll Buffer
 
 ANSI Stages is a simple package meant to emulate the stages in a cli tool where
 overall output isn't important unless there is a failure. It consists of a
