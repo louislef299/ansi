@@ -77,3 +77,11 @@ synchronization are not reliably transferred to packages like log and fmt.
 The tests are currently visual tests and require a human to watch the output and
 verify functionality. Not ideal, but that's how it is for now. Feel free to fix
 it!
+
+## References
+
+The scroll package takes some inspiration for the [log standard package][] and
+[Fatih Arslan's color package][].
+
+[Fatih Arslan's color package]: https://github.com/fatih/color
+[log standard package]: https://cs.opensource.google/go/go/+/master:src/log/
