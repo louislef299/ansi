@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/fatih/color"
+	"github.com/mattn/go-isatty"
 )
 
 // A Buffer represents the streaming buffer used for the ANSI scrolling stages
@@ -18,6 +19,9 @@ type Buffer struct {
 
 	// A prefix to print before each line
 	prefix string
+
+	// States whether the current fd is a Terminal
+	isTerm bool
 
 	// Set the color of output text
 	printerColor color.Attribute
@@ -39,7 +43,17 @@ type Buffer struct {
 	done      chan struct{}
 }
 
-var std, cancel = defaultBuffer()
+var (
+	std, cancel = defaultBuffer()
+
+	// IsTerm dynamically prevents usage of ANSI escape sequences if stdout's
+	// file descriptor is not a Terminal. NO_TERMINAL_CHECK is an environment
+	// variable used to override the default terminal check in the case it is
+	// incorrect.
+	IsTerm = (isatty.IsTerminal(os.Stdout.Fd()) ||
+		isatty.IsCygwinTerminal(os.Stdout.Fd()) ||
+		os.Getenv("NO_TERMINAL_CHECK") != "")
+)
 
 // Default returns the standard buffer used by the package-level output functions.
 func Default() *Buffer { return std }
@@ -61,6 +75,7 @@ func New(ctx context.Context, w io.Writer, bufferSize int) *Buffer {
 		printer: make(chan string),
 		stagger: make(chan struct{}, bufferSize),
 		done:    make(chan struct{}),
+		isTerm:  IsTerm,
 
 		lock: &sync.RWMutex{},
 		ctx:  ctx,

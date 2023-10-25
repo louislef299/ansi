@@ -103,8 +103,6 @@ func TestStandardStagesColor(t *testing.T) {
 
 func TestBufferStagesQuickly(t *testing.T) {
 	fmt.Println("Testing Buffer Stages Quickly:")
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
