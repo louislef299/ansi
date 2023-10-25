@@ -1,4 +1,4 @@
-package ansi_test
+package scroll_test
 
 import (
 	"context"
@@ -11,12 +11,12 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	. "github.com/louislef299/ansi"
+	. "github.com/louislef299/scroll"
 )
 
 func TestBufferCreation(t *testing.T) {
 	fmt.Println("Testing Buffer Creation:")
-	b := New(os.Stdout, context.TODO(), 5)
+	b := New(context.TODO(), os.Stdout, 5)
 	b.Println("hello world")
 }
 
@@ -36,7 +36,7 @@ func TestStandardBufferTicker(t *testing.T) {
 
 func TestEraseBuffer(t *testing.T) {
 	fmt.Println("Testing Erase Buffer:")
-	buff := New(os.Stdout, context.TODO(), 3)
+	buff := New(context.TODO(), os.Stdout, 3)
 
 	ticker := time.Tick(time.Millisecond * 100)
 	for i := 0; i < 5; i++ {
@@ -56,7 +56,7 @@ func TestBufferStagesSlow(t *testing.T) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	buff := New(os.Stdout, ctx, 4)
+	buff := New(ctx, os.Stdout, 4)
 	buff.SetPrefix("=>")
 
 	for i := 0; i < 2; i++ {
@@ -72,7 +72,7 @@ func TestBufferStagesColor(t *testing.T) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	buff := New(os.Stdout, ctx, 5)
+	buff := New(ctx, os.Stdout, 5)
 	buff.SetPrefix("=>")
 	buff.SetPrinterColor(color.FgHiMagenta)
 	buff.SetStageColor(color.FgGreen)
@@ -102,12 +102,10 @@ func TestStandardStagesColor(t *testing.T) {
 
 func TestBufferStagesQuickly(t *testing.T) {
 	fmt.Println("Testing Buffer Stages Quickly:")
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	buff := New(os.Stdout, ctx, 5)
+	buff := New(ctx, os.Stdout, 5)
 	buff.SetPrefix("=>")
 
 	for i := 0; i < 5; i++ {
@@ -137,7 +135,7 @@ func TestEmptyErase(t *testing.T) {
 }
 
 func TestLogWriterSimple(t *testing.T) {
-	log.SetOutput(New(os.Stdout, context.TODO(), 5))
+	log.SetOutput(New(context.TODO(), os.Stdout, 5))
 	log.Println("written from test")
 }
 
@@ -148,7 +146,7 @@ func TestLogWriterStage(t *testing.T) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	buff := New(os.Stdout, ctx, 5)
+	buff := New(ctx, os.Stdout, 5)
 	buff.SetPrefix("=>")
 	log.SetOutput(buff)
 
@@ -183,7 +181,7 @@ func TestStressBuffer(t *testing.T) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	buff := New(os.Stdout, ctx, 15)
+	buff := New(ctx, os.Stdout, 15)
 
 	var wg sync.WaitGroup
 	routines := 3000

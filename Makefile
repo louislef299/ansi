@@ -5,7 +5,7 @@ default: lint test test-colors
 
 test:
 	@echo "Running tests..."
-	@go test -v -race -cover ./...
+	@NO_TERMINAL_CHECK=true go test -v -race -cover ./...
 
 test-colors:
 	@echo "Running tests for output colors"

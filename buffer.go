@@ -1,4 +1,4 @@
-package ansi
+package scroll
 
 import (
 	"context"
@@ -9,9 +9,10 @@ import (
 	"sync"
 
 	"github.com/fatih/color"
+	"github.com/mattn/go-isatty"
 )
 
-// A Buffer represents the streaming buffer used for the ANSI stages
+// A Buffer represents the streaming buffer used for the ANSI scrolling stages
 type Buffer struct {
 	// The length of the visible output to the user
 	bufferSize int
@@ -19,49 +20,68 @@ type Buffer struct {
 	// A prefix to print before each line
 	prefix string
 
+	// States whether the current fd is a Terminal
+	isTerm bool
+
 	// Set the color of output text
 	printerColor color.Attribute
 	stageColor   color.Attribute
 
-	w io.Writer
+	w      io.Writer
+	buffer []string
 
 	// Internal synchronization variables
-	buffer  []string
 	eraser  chan string
 	printer chan string
 	stagger chan struct{}
-	lock    *sync.RWMutex
+
+	lock *sync.RWMutex
+	ctx  context.Context
 
 	// Standard buffer synchronization requirements
 	stdBuffer bool
 	done      chan struct{}
 }
 
-var std = defaultBuffer()
+var (
+	std = defaultBuffer()
+
+	// IsTerm dynamically prevents usage of ANSI escape sequences if stdout's
+	// file descriptor is not a Terminal. NO_TERMINAL_CHECK is an environment
+	// variable used to override the default terminal check in the case it is
+	// incorrect.
+	IsTerm = (isatty.IsTerminal(os.Stdout.Fd()) ||
+		isatty.IsCygwinTerminal(os.Stdout.Fd()) ||
+		os.Getenv("NO_TERMINAL_CHECK") != "")
+)
 
 // Default returns the standard buffer used by the package-level output functions.
 func Default() *Buffer { return std }
 
-// Used to set the standard buffer
+// defaultBuffer is used to set the standard buffer internally.
 func defaultBuffer() *Buffer {
-	b := New(os.Stdout, context.TODO(), 15)
+	b := New(context.TODO(), os.Stdout, 15)
 	b.stdBuffer = true
 	return b
 }
 
-// New starts a goroutine to print or erase lines and cancels on contexb.Done().
-// The return values
-func New(w io.Writer, ctx context.Context, bufferSize int) *Buffer {
+// New creates a new Buffer which starts a goroutine to print or erase lines and
+// cancels on context.Done(). Returns a new Buffer to allow for scroll output to
+// be written.
+func New(ctx context.Context, w io.Writer, bufferSize int) *Buffer {
 	b := &Buffer{
-		bufferSize: bufferSize,
-		w:          w,
-
 		eraser:  make(chan string),
-		lock:    &sync.RWMutex{},
 		printer: make(chan string),
 		stagger: make(chan struct{}, bufferSize),
 		done:    make(chan struct{}),
+		isTerm:  IsTerm,
+
+		lock: &sync.RWMutex{},
+		ctx:  ctx,
 	}
+
+	b.SetOutput(w)
+	b.SetBufferSize(bufferSize)
 
 	go func(buff *Buffer) {
 		defer close(b.printer)
@@ -83,7 +103,7 @@ func New(w io.Writer, ctx context.Context, bufferSize int) *Buffer {
 					buff.getColorWriter(EraserStage).Println(e)
 				}
 				b.done <- struct{}{}
-			case <-ctx.Done():
+			case <-b.ctx.Done():
 				return
 			}
 		}
@@ -157,18 +177,27 @@ func (b *Buffer) Println(a ...interface{}) {
 	b.printer <- fmt.Sprint(a...)
 }
 
+// SetBufferSize sets the size of the Buffer.
+func (b *Buffer) SetBufferSize(size int) {
+	b.bufferSize = size
+}
+
+// SetOutput sets the destination output for the Buffer.
 func (b *Buffer) SetOutput(w io.Writer) {
 	b.w = w
 }
 
+// SetPrefix sets the prefix for output from the Buffer.
 func (b *Buffer) SetPrefix(prefix string) {
 	b.prefix = prefix
 }
 
+// SetPrinterColor sets the output color for scrolling output on the Buffer.
 func (b *Buffer) SetPrinterColor(color color.Attribute) {
 	b.printerColor = color
 }
 
+// SetStageColor sets the output color for stage finalizer output on the Buffer.
 func (b *Buffer) SetStageColor(color color.Attribute) {
 	b.stageColor = color
 }
@@ -223,18 +252,34 @@ func Println(a ...interface{}) {
 	<-std.done
 }
 
+// SetBufferSize sets the buffer size of the standard Buffer.
+func SetBufferSize(size int) {
+	std.bufferSize = size
+}
+
+// SetContext sets the context of the standard Buffer.
+func SetContext(ctx context.Context) {
+	std.ctx = ctx
+}
+
+// SetOutput sets the destination output for the standard Buffer.
 func SetOutput(w io.Writer) {
 	std.w = w
 }
 
+// SetPrefix sets the prefix for output from the standard Buffer.
 func SetPrefix(prefix string) {
 	std.prefix = prefix
 }
 
+// SetPrinterColor sets the output color for scrolling output on the standard
+// Buffer.
 func SetPrinterColor(color color.Attribute) {
 	std.printerColor = color
 }
 
+// SetStageColor sets the output color for stage finalizer output on the
+// standard Buffer.
 func SetStageColor(color color.Attribute) {
 	std.stageColor = color
 }
