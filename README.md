@@ -69,8 +69,8 @@ log.SetOutput(New(context.TODO(), 5))
 log.Println("written from test")
 ```
 
-It is unreliable under stress however, as the channels that are created for
-synchronization are not reliably transferred to packages like log and fmt.
+The writer is unreliable under stress however, as the channels that are created
+for synchronization are not reliably transferred to packages like log and fmt.
 
 ## Contributing
 
