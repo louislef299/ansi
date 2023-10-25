@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"os/signal"
 	"sync"
@@ -184,12 +185,13 @@ func TestStressBuffer(t *testing.T) {
 	buff := New(ctx, os.Stdout, 15)
 
 	var wg sync.WaitGroup
-	routines := 5000
+	routines := 10000
 	wg.Add(routines)
 	for i := 0; i < routines; i++ {
 		go func(n int) {
 			defer wg.Done()
-			buff.Printf("hello from %d", n)
+			r := rand.Float64()
+			buff.Printf("hello from %d http://long-url-%g", n, r)
 		}(i)
 	}
 	wg.Wait()
