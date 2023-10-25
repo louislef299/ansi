@@ -128,7 +128,8 @@ func (b *Buffer) print(a ...string) {
 	}
 }
 
-// Erases the buffer size of lines
+// eraseBuffer erases all lines that are printed to the terminal for the
+// existing Buffer.
 func (b *Buffer) eraseBuffer() {
 	if len(b.buffer) == 0 {
 		return // nothing to erase
@@ -139,8 +140,8 @@ func (b *Buffer) eraseBuffer() {
 	}
 }
 
-// Resets the Buffer buffer by erasing buffer output and printing out the string
-// input to the screen.
+// NewStage resets the Buffer by erasing the buffer output and printing out the
+// stage input to the screen.
 func (b *Buffer) NewStage(format string, a ...interface{}) {
 	if b.bufferSize == 0 {
 		panic("your buffer hasn't been initialized!")
