@@ -177,14 +177,14 @@ func runSampleStage(b *Buffer, iterations int, wait time.Duration) {
 }
 
 func TestStressBuffer(t *testing.T) {
-	fmt.Println("Attempting to stress the Buffer")
+	fmt.Println("Attempting to stress the Buffer(all lines should get erased after pause)")
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
 	buff := New(ctx, os.Stdout, 15)
 
 	var wg sync.WaitGroup
-	routines := 3000
+	routines := 5000
 	wg.Add(routines)
 	for i := 0; i < routines; i++ {
 		go func(n int) {
@@ -193,6 +193,7 @@ func TestStressBuffer(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
+	buff.Println("sleeping 3 seconds to realize output...")
 	time.Sleep(time.Second * 3)
 	buff.EraseBuffer()
 
