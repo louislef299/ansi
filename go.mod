@@ -1,4 +1,4 @@
-module github.com/louislef299/ansi
+module github.com/louislef299/scroll
 
 go 1.21
 

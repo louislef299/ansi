@@ -1,4 +1,4 @@
-package ansi
+package scroll
 
 import "fmt"
 

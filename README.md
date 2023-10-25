@@ -69,3 +69,9 @@ synchronization are not reliably transferred to packages like log and fmt.
 The tests are currently visual tests and require a human to watch the output and
 verify functionality. Not ideal, but that's how it is for now. Feel free to fix
 it!
+
+## To-Do
+
+Utilize [Windows escape sequences][]
+
+[Windows escape sequences]: https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#output-sequences

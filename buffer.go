@@ -1,4 +1,4 @@
-package ansi
+package scroll
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/fatih/color"
 )
 
-// A Buffer represents the streaming buffer used for the ANSI stages
+// A Buffer represents the streaming buffer used for the ANSI scrolling stages
 type Buffer struct {
 	// The length of the visible output to the user
 	bufferSize int
@@ -42,16 +42,17 @@ var std = defaultBuffer()
 // Default returns the standard buffer used by the package-level output functions.
 func Default() *Buffer { return std }
 
-// Used to set the standard buffer
+// defaultBuffer is used to set the standard buffer internally.
 func defaultBuffer() *Buffer {
-	b := New(os.Stdout, context.TODO(), 15)
+	b := New(context.TODO(), os.Stdout, 15)
 	b.stdBuffer = true
 	return b
 }
 
-// New starts a goroutine to print or erase lines and cancels on contexb.Done().
-// The return values
-func New(w io.Writer, ctx context.Context, bufferSize int) *Buffer {
+// New creates a new Buffer which starts a goroutine to print or erase lines and
+// cancels on context.Done(). Returns a new Buffer to allow for scroll output to
+// be written.
+func New(ctx context.Context, w io.Writer, bufferSize int) *Buffer {
 	b := &Buffer{
 		bufferSize: bufferSize,
 		w:          w,
