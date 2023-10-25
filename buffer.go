@@ -3,6 +3,8 @@ package ansi
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 	"sync"
 
@@ -12,48 +14,75 @@ import (
 // A Buffer represents the streaming buffer used for the ANSI stages
 type Buffer struct {
 	// The length of the visible output to the user
-	BufferSize int
+	bufferSize int
 
 	// A prefix to print before each line
-	Prefix string
+	prefix string
 
 	// Set the color of output text
-	PrinterColor color.Attribute
-	StageColor   color.Attribute
+	printerColor color.Attribute
+	stageColor   color.Attribute
+
+	w io.Writer
 
 	// Internal synchronization variables
 	buffer  []string
 	eraser  chan string
 	printer chan string
+	stagger chan struct{}
+	lock    *sync.RWMutex
+
+	// Standard buffer synchronization requirements
+	stdBuffer bool
+	done      chan struct{}
+}
+
+var std = defaultBuffer()
+
+// Default returns the standard buffer used by the package-level output functions.
+func Default() *Buffer { return std }
+
+// Used to set the standard buffer
+func defaultBuffer() *Buffer {
+	b := New(os.Stdout, context.TODO(), 15)
+	b.stdBuffer = true
+	return b
 }
 
 // New starts a goroutine to print or erase lines and cancels on contexb.Done().
 // The return values
-func New(ctx context.Context, bufferSize int) *Buffer {
-	var w sync.Mutex
+func New(w io.Writer, ctx context.Context, bufferSize int) *Buffer {
 	b := &Buffer{
-		BufferSize: bufferSize,
-		eraser:     make(chan string),
+		bufferSize: bufferSize,
+		w:          w,
+
+		eraser:  make(chan string),
+		lock:    &sync.RWMutex{},
+		printer: make(chan string),
+		stagger: make(chan struct{}, bufferSize),
+		done:    make(chan struct{}),
 	}
-	b.printer = make(chan string)
 
 	go func(buff *Buffer) {
 		defer close(b.printer)
 		defer close(buff.eraser)
+		defer close(b.stagger)
+		defer close(b.done)
+
 		for {
 			select {
 			case p := <-b.printer:
-				w.Lock()
-				buff.print(p)
-				w.Unlock()
+				buff.print(buff.prefix, p)
+				if b.stdBuffer {
+					b.done <- struct{}{}
+				}
 			case e := <-b.eraser:
-				w.Lock()
 				buff.eraseBuffer()
 				buff.buffer = []string{}
 				if strings.Compare("", e) != 0 {
 					buff.getColorWriter(EraserStage).Println(e)
 				}
-				w.Unlock()
+				b.done <- struct{}{}
 			case <-ctx.Done():
 				return
 			}
@@ -62,69 +91,152 @@ func New(ctx context.Context, bufferSize int) *Buffer {
 	return b
 }
 
-// Resets the Buffer buffer by erasing buffer output and printing out the string
-// input to the screen.
-func (b *Buffer) NewStage(format string, a ...interface{}) {
-	if b.BufferSize == 0 {
-		panic("your buffer hasn't been initialized!")
-	}
-	b.eraser <- fmt.Sprintf(format, a...)
-}
+// print runs the logic required to actually print the output to the desired
+// line in a scrolling fashion.
+func (b *Buffer) print(a ...string) {
+	s := strings.TrimSpace(strings.Join(a, " "))
+	b.buffer = append(b.buffer, s)
+	c := b.getColorWriter(PrinterStage)
 
-// EraseBuffer is the exported function that includes Buffer validations.
-func (b *Buffer) EraseBuffer() {
-	b.NewStage("")
+	if len(b.buffer) <= b.bufferSize {
+		c.Fprintln(b.w, s)
+	} else {
+		b.eraseBuffer()
+		for i := b.bufferSize; i > 0; i-- {
+			c.Fprintln(b.w, b.buffer[len(b.buffer)-i])
+		}
+	}
 }
 
 // Erases the buffer size of lines
 func (b *Buffer) eraseBuffer() {
-	if len(b.buffer) < b.BufferSize {
-		eraseLines(len(b.buffer))
+	if len(b.buffer) == 0 {
+		return // nothing to erase
+	} else if len(b.buffer) < b.bufferSize {
+		b.eraseLines(len(b.buffer))
 	} else {
-		eraseLines(b.BufferSize)
+		b.eraseLines(b.bufferSize)
 	}
+}
+
+// Resets the Buffer buffer by erasing buffer output and printing out the string
+// input to the screen.
+func (b *Buffer) NewStage(format string, a ...interface{}) {
+	if b.bufferSize == 0 {
+		panic("your buffer hasn't been initialized!")
+	}
+	b.eraser <- fmt.Sprintf(format, a...)
+	<-b.done
+}
+
+// EraseBuffer is the exported function that includes Buffer validations.
+func (b *Buffer) EraseBuffer() {
+	b.eraser <- ""
+	<-b.done
 }
 
 // Printf safely executes the channel printing logic and formats the provided
 // string to the temporary buffer.
 func (b *Buffer) Printf(format string, a ...interface{}) {
+	b.stagger <- struct{}{}
+	defer func() {
+		<-b.stagger
+	}()
+
 	b.printer <- fmt.Sprintf(format, a...)
 }
 
 // Println safely executes the channel printing logic and formats the provided
 // string to the temporary buffer.
 func (b *Buffer) Println(a ...interface{}) {
+	b.stagger <- struct{}{}
+	defer func() {
+		<-b.stagger
+	}()
+
 	b.printer <- fmt.Sprint(a...)
 }
 
-// print runs the logic required to actually print the output to the desired
-// line in a scrolling fashion.
-func (b *Buffer) print(a ...string) {
-	s := strings.Join(a, " ")
-	b.buffer = append(b.buffer, s)
-	prefixSet := strings.Compare(b.Prefix, "") != 0
-	c := b.getColorWriter(PrinterStage)
+func (b *Buffer) SetOutput(w io.Writer) {
+	b.w = w
+}
 
-	if len(b.buffer) <= b.BufferSize {
-		if prefixSet {
-			c.Printf("%s ", b.Prefix)
-		}
-		c.Println(s)
-	} else {
-		b.eraseBuffer()
-		for i := b.BufferSize; i > 0; i-- {
-			if prefixSet {
-				c.Printf("%s ", b.Prefix)
-			}
-			c.Println(b.buffer[len(b.buffer)-i])
-		}
-	}
+func (b *Buffer) SetPrefix(prefix string) {
+	b.prefix = prefix
+}
+
+func (b *Buffer) SetPrinterColor(color color.Attribute) {
+	b.printerColor = color
+}
+
+func (b *Buffer) SetStageColor(color color.Attribute) {
+	b.stageColor = color
 }
 
 // Write implements io.Writer for Buffer to be used as output in other types.
+// This functionality is EXPERIMENTAL. The inherent channels aren't copied over
+// properly to most packages, so behavior isn't as expected.
 func (b *Buffer) Write(p []byte) (n int, err error) {
-	b.Println(strings.TrimSpace(string(p)))
+	b.stagger <- struct{}{}
+	defer func() {
+		<-b.stagger
+	}()
+
+	b.printer <- fmt.Sprint(strings.TrimSpace(string(p)))
 	return len(p), nil
+}
+
+// EraseBuffer is the exported function that includes Buffer validations.
+func EraseBuffer() {
+	std.eraser <- ""
+	<-std.done
+}
+
+// Resets the Buffer buffer by erasing buffer output and printing out the string
+// input to the screen for the standard buffer.
+func NewStage(format string, a ...interface{}) {
+	std.eraser <- fmt.Sprintf(format, a...)
+	<-std.done
+}
+
+// Printf safely executes the channel printing logic and formats the provided
+// string to the standard buffer.
+func Printf(format string, a ...interface{}) {
+	std.stagger <- struct{}{}
+	defer func() {
+		<-std.stagger
+	}()
+
+	std.printer <- fmt.Sprintf(format, a...)
+	<-std.done
+}
+
+// Println safely executes the channel printing logic and formats the provided
+// string to the standard buffer.
+func Println(a ...interface{}) {
+	std.stagger <- struct{}{}
+	defer func() {
+		<-std.stagger
+	}()
+
+	std.printer <- fmt.Sprint(a...)
+	<-std.done
+}
+
+func SetOutput(w io.Writer) {
+	std.w = w
+}
+
+func SetPrefix(prefix string) {
+	std.prefix = prefix
+}
+
+func SetPrinterColor(color color.Attribute) {
+	std.printerColor = color
+}
+
+func SetStageColor(color color.Attribute) {
+	std.stageColor = color
 }
 
 // Custom stage type for color function
@@ -140,9 +252,9 @@ func (b *Buffer) getColorWriter(s stage) *color.Color {
 	var c color.Attribute
 	switch s {
 	case EraserStage:
-		c = b.StageColor
+		c = b.stageColor
 	default:
-		c = b.PrinterColor
+		c = b.printerColor
 	}
 	return color.New(c)
 }

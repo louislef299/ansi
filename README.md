@@ -1,4 +1,4 @@
-# Go ANSI Stages
+# Go Scroll Buffer
 
 ANSI Stages is a simple package meant to emulate the stages in a cli tool where
 overall output isn't important unless there is a failure. It consists of a
@@ -60,6 +60,9 @@ The ANSI Buffer also implements io.Writer:
 log.SetOutput(New(context.TODO(), 5))
 log.Println("written from test")
 ```
+
+It is unreliable under stress however, as the channels that are created for
+synchronization are not reliably transferred to packages like log and fmt.
 
 ## Contributing
 
