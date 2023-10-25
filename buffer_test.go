@@ -167,7 +167,6 @@ func TestStressBuffer(t *testing.T) {
 	defer cancel()
 
 	buff := New(os.Stdout, ctx, 15)
-	log.SetOutput(buff)
 
 	var wg sync.WaitGroup
 	routines := 3000
@@ -179,5 +178,7 @@ func TestStressBuffer(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
-	time.Sleep(time.Millisecond)
+	time.Sleep(time.Second * 3)
+	buff.EraseBuffer()
+
 }
