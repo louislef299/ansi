@@ -44,7 +44,7 @@ type Buffer struct {
 }
 
 var (
-	std, cancel = defaultBuffer()
+	std = defaultBuffer()
 
 	// IsTerm dynamically prevents usage of ANSI escape sequences if stdout's
 	// file descriptor is not a Terminal. NO_TERMINAL_CHECK is an environment
@@ -59,11 +59,10 @@ var (
 func Default() *Buffer { return std }
 
 // defaultBuffer is used to set the standard buffer internally.
-func defaultBuffer() (*Buffer, context.CancelFunc) {
-	ctx, cancel := context.WithCancel(context.TODO())
-	b := New(ctx, os.Stdout, 15)
+func defaultBuffer() *Buffer {
+	b := New(context.TODO(), os.Stdout, 15)
 	b.stdBuffer = true
-	return b, cancel
+	return b
 }
 
 // New creates a new Buffer which starts a goroutine to print or erase lines and
@@ -214,12 +213,6 @@ func (b *Buffer) Write(p []byte) (n int, err error) {
 
 	b.printer <- fmt.Sprint(strings.TrimSpace(string(p)))
 	return len(p), nil
-}
-
-// CancelBuffer safely abandons work and closes the Buffer. After Cancelling a
-// Buffer, it is no longer useable.
-func CancelBuffer() {
-	cancel()
 }
 
 // EraseBuffer is the exported function that includes Buffer validations.

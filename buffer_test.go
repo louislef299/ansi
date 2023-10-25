@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/louislef299/scroll"
 	. "github.com/louislef299/scroll"
 )
 
@@ -117,7 +116,6 @@ func TestBufferStagesQuickly(t *testing.T) {
 
 func TestStandardBufferStagesQuickly(t *testing.T) {
 	fmt.Println("Testing Standard Buffer Stages Quickly:")
-	defer scroll.CancelBuffer()
 	SetStageColor(color.FgBlue)
 
 	for i := 0; i < 5; i++ {
