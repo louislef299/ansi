@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.2](https://github.com/louislef299/scroll/compare/v1.0.1...v1.0.2) (2023-10-25)
+
+
+### Bug Fixes
+
+* docs and pkg structure ([#9](https://github.com/louislef299/scroll/issues/9)) ([6e1a4f3](https://github.com/louislef299/scroll/commit/6e1a4f309470e520fe3f1a1ac58592793f2a9d25))
+* stagger input ([#7](https://github.com/louislef299/scroll/issues/7)) ([a806f68](https://github.com/louislef299/scroll/commit/a806f688a4f59d7e9b420d5385cc89427ce5e4a9))
+
 ## [1.0.1](https://github.com/louislef299/ansi/compare/v1.0.0...v1.0.1) (2023-10-24)
 
 
