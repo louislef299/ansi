@@ -10,7 +10,9 @@ in stages, but the overall result may be important to communicate to the user.
 
 ## Install
 
-`go get github.com/louislef299/scroll`
+```bash
+go get github.com/louislef299/scroll
+```
 
 ## Examples
 
