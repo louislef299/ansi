@@ -83,6 +83,23 @@ func TestBufferStagesColor(t *testing.T) {
 	}
 }
 
+func TestStandardStagesColor(t *testing.T) {
+	fmt.Println("Testing Standard Buffer with Color:")
+
+	SetPrefix("=>")
+	SetPrinterColor(color.FgHiMagenta)
+	SetStageColor(color.FgGreen)
+
+	for i := 0; i < 3; i++ {
+		ticker := time.Tick(time.Millisecond * 100)
+		for i := 0; i < 5; i++ {
+			<-ticker
+			Printf("test line %d", i)
+		}
+		NewStage("=>=> stage %d finished!", i)
+	}
+}
+
 func TestBufferStagesQuickly(t *testing.T) {
 	fmt.Println("Testing Buffer Stages Quickly:")
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
