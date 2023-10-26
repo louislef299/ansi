@@ -54,7 +54,7 @@ Create a custom Buffer:
 
 ```go
 // Creates a new buffer with a size of 5
-buff := New(context.TODO(), os.Stdout, 5)
+buff := scroll.New(context.TODO(), os.Stdout, 5)
 
 // Prints hello world 5x
 for i := 0; i < 5; i++ {
@@ -67,7 +67,7 @@ buff.NewStage("finish buffer example!")
 The ANSI Buffer also implements io.Writer:
 
 ```go
-log.SetOutput(New(context.TODO(), 5))
+log.SetOutput(scroll.New(context.TODO(), 5))
 log.Println("written from test")
 ```
 
@@ -79,6 +79,11 @@ for synchronization are not reliably transferred to packages like log and fmt.
 The tests are currently visual tests and require a human to watch the output and
 verify functionality. Not ideal, but that's how it is for now. Feel free to fix
 it!
+
+### Known Issues
+
+- If the line sent to the buffer is longer than the width of the terminal, the
+  number of lines deleted is incorrect.
 
 ## References
 

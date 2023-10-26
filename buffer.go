@@ -9,13 +9,16 @@ import (
 	"sync"
 
 	"github.com/fatih/color"
-	"github.com/mattn/go-isatty"
+	"golang.org/x/term"
 )
 
 // A Buffer represents the streaming buffer used for the ANSI scrolling stages
 type Buffer struct {
-	// The length of the visible output to the user
-	bufferSize int
+	// The max length of the visible output to the user
+	bufferMax int
+
+	// Represents the current buffer size
+	currentBufferSize int
 
 	// A prefix to print before each line
 	prefix string
@@ -50,10 +53,12 @@ var (
 	// file descriptor is not a Terminal. NO_TERMINAL_CHECK is an environment
 	// variable used to override the default terminal check in the case it is
 	// incorrect.
-	IsTerm = (isatty.IsTerminal(os.Stdout.Fd()) ||
-		isatty.IsCygwinTerminal(os.Stdout.Fd()) ||
+	IsTerm = (term.IsTerminal(int(os.Stdout.Fd())) ||
 		os.Getenv("NO_TERMINAL_CHECK") != "")
 )
+
+// Represents the default buffer size when running on a non-tty terminal
+const DEFAULT_BUFFER_SIZE = 100
 
 // Default returns the standard buffer used by the package-level output functions.
 func Default() *Buffer { return std }
@@ -81,7 +86,7 @@ func New(ctx context.Context, w io.Writer, bufferSize int) *Buffer {
 	}
 
 	b.SetOutput(w)
-	b.SetBufferSize(bufferSize)
+	b.SetBufferMax(bufferSize)
 
 	go func(buff *Buffer) {
 		defer close(b.printer)
@@ -114,16 +119,27 @@ func New(ctx context.Context, w io.Writer, bufferSize int) *Buffer {
 // print runs the logic required to actually print the output to the desired
 // line in a scrolling fashion.
 func (b *Buffer) print(a ...string) {
-	s := strings.TrimSpace(strings.Join(a, " "))
-	b.buffer = append(b.buffer, s)
-	c := b.getColorWriter(PrinterStage)
+	w := getBufferSize()
+	output := chunk(strings.TrimSpace(strings.Join(a, " ")), w)
 
-	if len(b.buffer) <= b.bufferSize {
-		c.Fprintln(b.w, s)
+	if len(b.buffer) > b.bufferMax {
+		// don't grow buffer more than needed
+		b.buffer = append(b.buffer[1:], output...)
+	} else {
+		b.buffer = append(b.buffer, output...)
+	}
+
+	c := b.getColorWriter(PrinterStage)
+	if b.currentBufferSize+len(output) <= b.bufferMax {
+		for _, s := range output {
+			c.Fprintln(b.w, s)
+			b.currentBufferSize++
+		}
 	} else {
 		b.eraseBuffer()
-		for i := b.bufferSize; i > 0; i-- {
+		for i := b.bufferMax; i > 0; i-- {
 			c.Fprintln(b.w, b.buffer[len(b.buffer)-i])
+			b.currentBufferSize++
 		}
 	}
 }
@@ -131,19 +147,30 @@ func (b *Buffer) print(a ...string) {
 // eraseBuffer erases all lines that are printed to the terminal for the
 // existing Buffer.
 func (b *Buffer) eraseBuffer() {
-	if len(b.buffer) == 0 {
+	if b.currentBufferSize == 0 {
 		return // nothing to erase
-	} else if len(b.buffer) < b.bufferSize {
-		b.eraseLines(len(b.buffer))
+	} else if b.currentBufferSize < b.bufferMax {
+		b.eraseLines(b.currentBufferSize)
 	} else {
-		b.eraseLines(b.bufferSize)
+		b.eraseLines(b.bufferMax)
 	}
+	b.currentBufferSize = 0
+}
+
+func getBufferSize() int {
+	// dynamically checks to see if the buffer will go beyond the width limit of
+	// the terminal
+	w, _, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		return DEFAULT_BUFFER_SIZE
+	}
+	return w
 }
 
 // NewStage resets the Buffer by erasing the buffer output and printing out the
 // stage input to the screen.
 func (b *Buffer) NewStage(format string, a ...interface{}) {
-	if b.bufferSize == 0 {
+	if b.bufferMax == 0 {
 		panic("your buffer hasn't been initialized!")
 	}
 	b.eraser <- fmt.Sprintf(format, a...)
@@ -154,6 +181,11 @@ func (b *Buffer) NewStage(format string, a ...interface{}) {
 func (b *Buffer) EraseBuffer() {
 	b.eraser <- ""
 	<-b.done
+}
+
+// GetBufferSize returns the current bufferSize of the Buffer.
+func (b *Buffer) GetBufferSize() int {
+	return b.bufferMax
 }
 
 // Printf safely executes the channel printing logic and formats the provided
@@ -178,9 +210,9 @@ func (b *Buffer) Println(a ...interface{}) {
 	b.printer <- fmt.Sprint(a...)
 }
 
-// SetBufferSize sets the size of the Buffer.
-func (b *Buffer) SetBufferSize(size int) {
-	b.bufferSize = size
+// SetBufferMax sets the size of the Buffer.
+func (b *Buffer) SetBufferMax(size int) {
+	b.bufferMax = size
 }
 
 // SetOutput sets the destination output for the Buffer.
@@ -222,6 +254,12 @@ func EraseBuffer() {
 	<-std.done
 }
 
+// GetBufferMax returns the current maximum buffer length of the standard
+// Buffer.
+func GetBufferMax() int {
+	return std.bufferMax
+}
+
 // Resets the Buffer buffer by erasing buffer output and printing out the string
 // input to the screen for the standard buffer.
 func NewStage(format string, a ...interface{}) {
@@ -253,9 +291,9 @@ func Println(a ...interface{}) {
 	<-std.done
 }
 
-// SetBufferSize sets the buffer size of the standard Buffer.
-func SetBufferSize(size int) {
-	std.bufferSize = size
+// SetBufferMax sets the buffer size of the standard Buffer.
+func SetBufferMax(size int) {
+	std.bufferMax = size
 }
 
 // SetContext sets the context of the standard Buffer.
@@ -303,4 +341,34 @@ func (b *Buffer) getColorWriter(s stage) *color.Color {
 		c = b.printerColor
 	}
 	return color.New(c)
+}
+
+// chunk splits a provided string by newline characters and by the maximum
+// length of the buffer. A string list of plaintext strings that fit in each
+// buffer line is returned.
+func chunk(s string, chunkSize int) []string {
+	if len(s) == 0 {
+		return nil
+	}
+
+	splits := strings.Split(s, "\n")
+	if chunkSize >= len(s) {
+		return splits
+	}
+	var chunks []string
+
+	for _, split := range splits {
+		currentLen := 0
+		currentStart := 0
+		for i := range split {
+			if currentLen == chunkSize {
+				chunks = append(chunks, s[currentStart:i])
+				currentLen = 0
+				currentStart = i
+			}
+			currentLen++
+		}
+		chunks = append(chunks, s[currentStart:])
+	}
+	return chunks
 }
