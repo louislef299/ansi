@@ -343,24 +343,32 @@ func (b *Buffer) getColorWriter(s stage) *color.Color {
 	return color.New(c)
 }
 
+// chunk splits a provided string by newline characters and by the maximum
+// length of the buffer. A string list of plaintext strings that fit in each
+// buffer line is returned.
 func chunk(s string, chunkSize int) []string {
 	if len(s) == 0 {
 		return nil
 	}
+
+	splits := strings.Split(s, "\n")
 	if chunkSize >= len(s) {
-		return []string{s}
+		return splits
 	}
-	var chunks []string = make([]string, 0, (len(s)-1)/chunkSize+1)
-	currentLen := 0
-	currentStart := 0
-	for i := range s {
-		if currentLen == chunkSize {
-			chunks = append(chunks, s[currentStart:i])
-			currentLen = 0
-			currentStart = i
+	var chunks []string
+
+	for _, split := range splits {
+		currentLen := 0
+		currentStart := 0
+		for i := range split {
+			if currentLen == chunkSize {
+				chunks = append(chunks, s[currentStart:i])
+				currentLen = 0
+				currentStart = i
+			}
+			currentLen++
 		}
-		currentLen++
+		chunks = append(chunks, s[currentStart:])
 	}
-	chunks = append(chunks, s[currentStart:])
 	return chunks
 }

@@ -161,23 +161,6 @@ func TestLogWriterStage(t *testing.T) {
 	time.Sleep(time.Second)
 }
 
-// Runs a sample stage to generate output
-func runSampleStage(b *scroll.Buffer, iterations int, wait time.Duration) {
-	stage1 := []string{
-		"hello flacko",
-		"hello yams",
-		"hello ferg",
-		"hello twelvyy",
-	}
-
-	ticker := time.Tick(wait)
-	for i := 0; i < iterations; i++ {
-		part := i % len(stage1)
-		<-ticker
-		b.Printf("%d: %s", i, stage1[part])
-	}
-}
-
 func TestStressBuffer(t *testing.T) {
 	fmt.Println("Attempting to stress the Buffer(all lines should get erased after pause)")
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -227,7 +210,7 @@ func TestMultiLineScrollSlow(t *testing.T) {
 		printStr = printStr + repeat
 	}
 
-	ticker := time.Tick(time.Second)
+	ticker := time.Tick(time.Millisecond * 200)
 	for i := 0; i < 20; i++ {
 		<-ticker
 		scroll.Printf("%d: %s", i, printStr)
@@ -257,6 +240,48 @@ func TestMultilineBufferStagesQuickly(t *testing.T) {
 		}
 
 		scroll.NewStage("=>=> stage %d finished!", i)
+	}
+}
+
+func TestManualMultiLineDeletion(t *testing.T) {
+	fmt.Println("Testing to see if manual multiline gets properly deleted:")
+
+	splitter := "doing\nsome\nsplits!"
+	scroll.Println(splitter)
+	scroll.Println("all should be erased")
+	time.Sleep(time.Second)
+	scroll.EraseBuffer()
+}
+func TestManualMultilineBufferStages(t *testing.T) {
+	fmt.Println("Testing Manual Multiline Buffer Stages:")
+	scroll.SetStageColor(color.FgBlue)
+
+	splitter := "currently\ndoing\nsome\nsplits!"
+	for i := 0; i < 5; i++ {
+		ticker := time.Tick(time.Millisecond * 20)
+		for i := 0; i < 30; i++ {
+			<-ticker
+			scroll.Printf("%d: %s", i, splitter)
+		}
+
+		scroll.NewStage("=>=> stage %d finished!", i)
+	}
+}
+
+// Runs a sample stage to generate output
+func runSampleStage(b *scroll.Buffer, iterations int, wait time.Duration) {
+	stage1 := []string{
+		"hello flacko",
+		"hello yams",
+		"hello ferg",
+		"hello twelvyy",
+	}
+
+	ticker := time.Tick(wait)
+	for i := 0; i < iterations; i++ {
+		part := i % len(stage1)
+		<-ticker
+		b.Printf("%d: %s", i, stage1[part])
 	}
 }
 
