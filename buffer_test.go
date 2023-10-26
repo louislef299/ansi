@@ -12,32 +12,33 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	. "github.com/louislef299/scroll"
+	"github.com/louislef299/scroll"
+	"golang.org/x/term"
 )
 
 func TestBufferCreation(t *testing.T) {
 	fmt.Println("Testing Buffer Creation:")
-	b := New(context.TODO(), os.Stdout, 5)
+	b := scroll.New(context.TODO(), os.Stdout, 5)
 	b.Println("hello world")
 }
 
 func TestStandardBufferTicker(t *testing.T) {
 	fmt.Println("Testing the Standard Buffer:")
-	SetPrefix("()=>")
-	SetPrinterColor(color.FgHiRed)
+	scroll.SetPrefix("()=>")
+	scroll.SetPrinterColor(color.FgHiRed)
 
 	ticker := time.Tick(time.Millisecond * 20)
 	for i := 0; i < 20; i++ {
 		<-ticker
-		Printf("%d: hello world", i)
+		scroll.Printf("%d: hello world", i)
 	}
 	time.Sleep(time.Second)
-	EraseBuffer()
+	scroll.EraseBuffer()
 }
 
 func TestEraseBuffer(t *testing.T) {
 	fmt.Println("Testing Erase Buffer:")
-	buff := New(context.TODO(), os.Stdout, 3)
+	buff := scroll.New(context.TODO(), os.Stdout, 3)
 
 	ticker := time.Tick(time.Millisecond * 100)
 	for i := 0; i < 5; i++ {
@@ -57,7 +58,7 @@ func TestBufferStagesSlow(t *testing.T) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	buff := New(ctx, os.Stdout, 4)
+	buff := scroll.New(ctx, os.Stdout, 4)
 	buff.SetPrefix("=>")
 
 	for i := 0; i < 2; i++ {
@@ -73,7 +74,7 @@ func TestBufferStagesColor(t *testing.T) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	buff := New(ctx, os.Stdout, 5)
+	buff := scroll.New(ctx, os.Stdout, 5)
 	buff.SetPrefix("=>")
 	buff.SetPrinterColor(color.FgHiMagenta)
 	buff.SetStageColor(color.FgGreen)
@@ -87,17 +88,17 @@ func TestBufferStagesColor(t *testing.T) {
 func TestStandardStagesColor(t *testing.T) {
 	fmt.Println("Testing Standard Buffer with Color:")
 
-	SetPrefix("=>")
-	SetPrinterColor(color.FgHiMagenta)
-	SetStageColor(color.FgGreen)
+	scroll.SetPrefix("=>")
+	scroll.SetPrinterColor(color.FgHiMagenta)
+	scroll.SetStageColor(color.FgGreen)
 
 	for i := 0; i < 3; i++ {
 		ticker := time.Tick(time.Millisecond * 100)
 		for i := 0; i < 5; i++ {
 			<-ticker
-			Printf("test line %d", i)
+			scroll.Printf("test line %d", i)
 		}
-		NewStage("=>=> stage %d finished!", i)
+		scroll.NewStage("=>=> stage %d finished!", i)
 	}
 }
 
@@ -106,7 +107,7 @@ func TestBufferStagesQuickly(t *testing.T) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	buff := New(ctx, os.Stdout, 5)
+	buff := scroll.New(ctx, os.Stdout, 5)
 	buff.SetPrefix("=>")
 
 	for i := 0; i < 5; i++ {
@@ -117,26 +118,26 @@ func TestBufferStagesQuickly(t *testing.T) {
 
 func TestStandardBufferStagesQuickly(t *testing.T) {
 	fmt.Println("Testing Standard Buffer Stages Quickly:")
-	SetStageColor(color.FgBlue)
+	scroll.SetStageColor(color.FgBlue)
 
 	for i := 0; i < 5; i++ {
 		ticker := time.Tick(time.Millisecond * 20)
 		for i := 0; i < 30; i++ {
 			<-ticker
-			Printf("%d: testing testing", i)
+			scroll.Printf("%d: testing testing", i)
 		}
 
-		NewStage("=>=> stage %d finished!", i)
+		scroll.NewStage("=>=> stage %d finished!", i)
 	}
 }
 
 func TestEmptyErase(t *testing.T) {
 	fmt.Println("Testing Empty Erase(this line should still show):")
-	EraseBuffer()
+	scroll.EraseBuffer()
 }
 
 func TestLogWriterSimple(t *testing.T) {
-	log.SetOutput(New(context.TODO(), os.Stdout, 5))
+	log.SetOutput(scroll.New(context.TODO(), os.Stdout, 5))
 	log.Println("written from test")
 }
 
@@ -147,7 +148,7 @@ func TestLogWriterStage(t *testing.T) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	buff := New(ctx, os.Stdout, 5)
+	buff := scroll.New(ctx, os.Stdout, 5)
 	buff.SetPrefix("=>")
 	log.SetOutput(buff)
 
@@ -161,7 +162,7 @@ func TestLogWriterStage(t *testing.T) {
 }
 
 // Runs a sample stage to generate output
-func runSampleStage(b *Buffer, iterations int, wait time.Duration) {
+func runSampleStage(b *scroll.Buffer, iterations int, wait time.Duration) {
 	stage1 := []string{
 		"hello flacko",
 		"hello yams",
@@ -182,7 +183,7 @@ func TestStressBuffer(t *testing.T) {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	buff := New(ctx, os.Stdout, 15)
+	buff := scroll.New(ctx, os.Stdout, 15)
 
 	var wg sync.WaitGroup
 	routines := 10000
@@ -199,4 +200,24 @@ func TestStressBuffer(t *testing.T) {
 	time.Sleep(time.Second * 3)
 	buff.EraseBuffer()
 
+}
+
+func TestMultiLineDeletion(t *testing.T) {
+	w, h, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+	}
+
+	fmt.Printf("height: %d\nwidth: %d\n", h, w)
+
+	repeat := "repeat"
+	var printStr string
+	for i := 0; i < w+10; i += len(repeat) {
+		printStr = printStr + repeat
+	}
+	scroll.Println(printStr)
+	scroll.Println("all should be erased")
+	time.Sleep(time.Second)
+	scroll.EraseBuffer()
 }
