@@ -203,13 +203,12 @@ func TestStressBuffer(t *testing.T) {
 }
 
 func TestMultiLineDeletion(t *testing.T) {
-	w, h, err := term.GetSize(int(os.Stdout.Fd()))
+	fmt.Println("Testing to see if multiline gets deleted:")
+	w, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
 		t.Log(err)
 		t.Fail()
 	}
-
-	fmt.Printf("height: %d\nwidth: %d\n", h, w)
 
 	repeat := "repeat"
 	var printStr string
@@ -220,4 +219,56 @@ func TestMultiLineDeletion(t *testing.T) {
 	scroll.Println("all should be erased")
 	time.Sleep(time.Second)
 	scroll.EraseBuffer()
+}
+
+func TestMultiLineScrollSlow(t *testing.T) {
+	fmt.Println("Testing to see if multiline scroll works properly:")
+	w, _, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+	}
+
+	repeat := "repeat"
+	var printStr string
+	for i := 0; i < w+10; i += len(repeat) {
+		printStr = printStr + repeat
+	}
+
+	ticker := time.Tick(time.Second)
+	for i := 0; i < 20; i++ {
+		<-ticker
+		scroll.Printf("%d: %s", i, printStr)
+	}
+
+	scroll.Println("all should be erased")
+	time.Sleep(time.Second)
+	scroll.EraseBuffer()
+}
+
+func TestMultilineBufferStagesQuickly(t *testing.T) {
+	fmt.Println("Testing Multiline Buffer Stages Quickly:")
+	scroll.SetStageColor(color.FgBlue)
+
+	w, _, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+	}
+
+	repeat := "repeat"
+	var printStr string
+	for i := 0; i < w+10; i += len(repeat) {
+		printStr = printStr + repeat
+	}
+
+	for i := 0; i < 5; i++ {
+		ticker := time.Tick(time.Millisecond * 20)
+		for i := 0; i < 30; i++ {
+			<-ticker
+			scroll.Printf("%d: %s", i, printStr)
+		}
+
+		scroll.NewStage("=>=> stage %d finished!", i)
+	}
 }
