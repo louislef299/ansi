@@ -80,11 +80,6 @@ The tests are currently visual tests and require a human to watch the output and
 verify functionality. Not ideal, but that's how it is for now. Feel free to fix
 it!
 
-### Known Issues
-
-- If the line sent to the buffer is longer than the width of the terminal, the
-  number of lines deleted is incorrect.
-
 ## References
 
 The scroll package takes some inspiration for the [log standard package][] and
