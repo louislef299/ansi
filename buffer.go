@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/fatih/color"
-	"github.com/mattn/go-isatty"
 	"golang.org/x/term"
 )
 
@@ -52,7 +51,6 @@ var (
 	// variable used to override the default terminal check in the case it is
 	// incorrect.
 	IsTerm = (term.IsTerminal(int(os.Stdout.Fd())) ||
-		isatty.IsCygwinTerminal(os.Stdout.Fd()) ||
 		os.Getenv("NO_TERMINAL_CHECK") != "")
 )
 
