@@ -204,11 +204,7 @@ func TestStressBuffer(t *testing.T) {
 
 func TestMultiLineDeletion(t *testing.T) {
 	fmt.Println("Testing to see if multiline gets deleted:")
-	w, _, err := term.GetSize(int(os.Stdout.Fd()))
-	if err != nil {
-		t.Log(err)
-		t.Fail()
-	}
+	w := getTermSize()
 
 	repeat := "repeat"
 	var printStr string
@@ -223,11 +219,7 @@ func TestMultiLineDeletion(t *testing.T) {
 
 func TestMultiLineScrollSlow(t *testing.T) {
 	fmt.Println("Testing to see if multiline scroll works properly:")
-	w, _, err := term.GetSize(int(os.Stdout.Fd()))
-	if err != nil {
-		t.Log(err)
-		t.Fail()
-	}
+	w := getTermSize()
 
 	repeat := "repeat"
 	var printStr string
@@ -249,12 +241,7 @@ func TestMultiLineScrollSlow(t *testing.T) {
 func TestMultilineBufferStagesQuickly(t *testing.T) {
 	fmt.Println("Testing Multiline Buffer Stages Quickly:")
 	scroll.SetStageColor(color.FgBlue)
-
-	w, _, err := term.GetSize(int(os.Stdout.Fd()))
-	if err != nil {
-		t.Log(err)
-		t.Fail()
-	}
+	w := getTermSize()
 
 	repeat := "repeat"
 	var printStr string
@@ -271,4 +258,12 @@ func TestMultilineBufferStagesQuickly(t *testing.T) {
 
 		scroll.NewStage("=>=> stage %d finished!", i)
 	}
+}
+
+func getTermSize() int {
+	w, _, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		return scroll.DEFUALT_BUFFER_SIZE
+	}
+	return w
 }

@@ -57,6 +57,9 @@ var (
 		os.Getenv("NO_TERMINAL_CHECK") != "")
 )
 
+// Represents the default buffer size when running on a non-tty terminal
+const DEFUALT_BUFFER_SIZE = 100
+
 // Default returns the standard buffer used by the package-level output functions.
 func Default() *Buffer { return std }
 
@@ -116,12 +119,7 @@ func New(ctx context.Context, w io.Writer, bufferSize int) *Buffer {
 // print runs the logic required to actually print the output to the desired
 // line in a scrolling fashion.
 func (b *Buffer) print(a ...string) {
-	// dynamically checks to see if the buffer will go beyond the width limit of
-	// the terminal
-	w, _, err := term.GetSize(int(os.Stdout.Fd()))
-	if err != nil {
-		panic(err)
-	}
+	w := getBufferSize()
 	output := chunk(strings.TrimSpace(strings.Join(a, " ")), w)
 
 	if len(b.buffer) > b.bufferMax {
@@ -157,6 +155,16 @@ func (b *Buffer) eraseBuffer() {
 		b.eraseLines(b.bufferMax)
 	}
 	b.currentBufferSize = 0
+}
+
+func getBufferSize() int {
+	// dynamically checks to see if the buffer will go beyond the width limit of
+	// the terminal
+	w, _, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		return DEFUALT_BUFFER_SIZE
+	}
+	return w
 }
 
 // NewStage resets the Buffer by erasing the buffer output and printing out the
