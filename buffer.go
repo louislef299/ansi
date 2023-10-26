@@ -58,7 +58,7 @@ var (
 )
 
 // Represents the default buffer size when running on a non-tty terminal
-const DEFUALT_BUFFER_SIZE = 100
+const DEFAULT_BUFFER_SIZE = 100
 
 // Default returns the standard buffer used by the package-level output functions.
 func Default() *Buffer { return std }
@@ -162,7 +162,7 @@ func getBufferSize() int {
 	// the terminal
 	w, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
-		return DEFUALT_BUFFER_SIZE
+		return DEFAULT_BUFFER_SIZE
 	}
 	return w
 }

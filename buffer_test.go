@@ -288,7 +288,7 @@ func runSampleStage(b *scroll.Buffer, iterations int, wait time.Duration) {
 func getTermSize() int {
 	w, _, err := term.GetSize(int(os.Stdout.Fd()))
 	if err != nil {
-		return scroll.DEFUALT_BUFFER_SIZE
+		return scroll.DEFAULT_BUFFER_SIZE
 	}
 	return w
 }
