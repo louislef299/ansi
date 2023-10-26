@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/louislef299/scroll/compare/v1.0.2...v1.1.0) (2023-10-26)
+
+
+### Features
+
+* Add multi line scroll ([#13](https://github.com/louislef299/scroll/issues/13)) ([10d01c1](https://github.com/louislef299/scroll/commit/10d01c11978696eb175812333cb5dacd781f246d))
+
 ## [1.0.2](https://github.com/louislef299/scroll/compare/v1.0.1...v1.0.2) (2023-10-25)
 
 
