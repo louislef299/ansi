@@ -116,7 +116,12 @@ func New(ctx context.Context, w io.Writer, bufferSize int) *Buffer {
 // line in a scrolling fashion.
 func (b *Buffer) print(a ...string) {
 	s := strings.TrimSpace(strings.Join(a, " "))
-	b.buffer = append(b.buffer, s)
+	if len(b.buffer) > b.bufferSize {
+		// don't grow buffer more than needed
+		b.buffer = append(b.buffer[1:], s)
+	} else {
+		b.buffer = append(b.buffer, s)
+	}
 	c := b.getColorWriter(PrinterStage)
 
 	if len(b.buffer) <= b.bufferSize {
@@ -155,6 +160,11 @@ func (b *Buffer) NewStage(format string, a ...interface{}) {
 func (b *Buffer) EraseBuffer() {
 	b.eraser <- ""
 	<-b.done
+}
+
+// GetBufferSize returns the current bufferSize of the Buffer.
+func (b *Buffer) GetBufferSize() int {
+	return b.bufferSize
 }
 
 // Printf safely executes the channel printing logic and formats the provided
@@ -221,6 +231,11 @@ func (b *Buffer) Write(p []byte) (n int, err error) {
 func EraseBuffer() {
 	std.eraser <- ""
 	<-std.done
+}
+
+// GetBufferSize returns the current bufferSize of the standard Buffer.
+func GetBufferSize() int {
+	return std.bufferSize
 }
 
 // Resets the Buffer buffer by erasing buffer output and printing out the string
